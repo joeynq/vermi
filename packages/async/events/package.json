@@ -1,0 +1,41 @@
+{
+	"name": "@vermi/events",
+	"module": "src/index.ts",
+	"main": "dist/index.js",
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"watch": "tsc -w"
+	},
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"require": "./dist/index.js"
+		},
+		"./kafka": {
+			"import": "./dist/consumers/kafka/index.js",
+			"require": "./dist/consumers/kafka/index.js"
+		},
+		"./bullmq": {
+			"import": "./dist/consumers/bullmq/index.js",
+			"require": "./dist/consumers/bullmq/index.js"
+		}
+	},
+	"devDependencies": {
+		"@sinclair/typebox": "^0.32.34",
+		"@types/bun": "latest",
+		"@vermi/core": "link:@vermi/core",
+		"@vermi/schema": "link:@vermi/schema",
+		"@vermi/utils": "link:@vermi/utils"
+	},
+	"peerDependencies": {
+		"typescript": "^5.5.3"
+	},
+	"dependencies": {
+		"bullmq": "^5.10.3",
+		"ioredis": "^5.4.1",
+		"kafkajs": "^2.2.4",
+		"reflect-metadata": "^0.2.2",
+		"tseep": "^1.2.2"
+	}
+}

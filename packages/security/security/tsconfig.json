@@ -1,0 +1,36 @@
+{
+	"include": ["src"],
+	"exclude": ["node_modules", "dist", "coverage"],
+	"compilerOptions": {
+		// Enable latest features
+		"lib": ["ESNext", "Decorators"],
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleDetection": "force",
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"sourceMap": true,
+
+		// Bundler mode
+		"moduleResolution": "bundler",
+		"verbatimModuleSyntax": true,
+		"noEmit": false,
+		"outDir": "dist",
+		"declaration": true,
+
+		// Best practices
+		"strict": true,
+		"skipLibCheck": true,
+		"noFallthroughCasesInSwitch": true,
+		"preserveWatchOutput": true,
+		"useDefineForClassFields": false,
+
+		// Some stricter flags (disabled by default)
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"noPropertyAccessFromIndexSignature": false,
+
+		// type
+		"types": ["@types/bun", "reflect-metadata"]
+	}
+}

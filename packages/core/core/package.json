@@ -1,0 +1,26 @@
+{
+	"name": "@vermi/core",
+	"module": "src/index.ts",
+	"main": "dist/index.js",
+	"type": "module",
+	"scripts": {
+		"link": "bun link",
+		"build": "tsc",
+		"watch": "tsc -w"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@vermi/utils": "link:@vermi/utils",
+		"awilix": "^10.0.2"
+	},
+	"peerDependencies": {
+		"awilix": "^10.0.2",
+		"typescript": "^5.5.3"
+	},
+	"dependencies": {
+		"chalk": "^5.3.0",
+		"consola": "^3.2.3",
+		"reflect-metadata": "^0.2.2",
+		"source-map-support": "^0.5.21"
+	}
+}

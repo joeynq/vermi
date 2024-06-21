@@ -1,5 +1,9 @@
-import type { LoggerAdapter, RequestContext } from "@vermi/core";
-import { After, Before, Middleware } from "@vermi/router";
+import {
+	type LoggerAdapter,
+	Middleware,
+	type RequestContext,
+} from "@vermi/core";
+import { After, Before } from "@vermi/router";
 
 @Middleware()
 export class AnyMiddleware {

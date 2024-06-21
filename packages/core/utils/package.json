@@ -1,0 +1,25 @@
+{
+	"name": "@vermi/utils",
+	"module": "src/index.ts",
+	"main": "dist/index.js",
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"watch": "tsc -w"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"type-fest": "^4.22.1"
+	},
+	"peerDependencies": {
+		"typescript": "^5.5.3"
+	},
+	"dependencies": {
+		"change-case": "^5.4.4",
+		"deepmerge-ts": "^5.1.0",
+		"faster-qs": "^0.2.4",
+		"pupa": "^3.1.0",
+		"radix3": "^1.1.2",
+		"safe-stable-stringify": "^2.4.3"
+	}
+}
