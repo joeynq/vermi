@@ -1,0 +1,35 @@
+{
+	"name": "@vermi/logger",
+	"module": "src/index.ts",
+	"main": "dist/index.js",
+	"exports": {
+		"./pino": {
+			"import": "./dist/PinoLogger.js",
+			"require": "./dist/PinoLogger.js"
+		},
+		"./consola": {
+			"import": "./dist/ConsolaLogger.js",
+			"require": "./dist/ConsolaLogger.js"
+		}
+	},
+	"type": "module",
+	"scripts": {
+		"link": "bun link",
+		"build": "tsc",
+		"watch": "tsc -w"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@vermi/core": "link:@vermi/core",
+		"@vermi/utils": "link:@vermi/utils"
+	},
+	"peerDependencies": {
+		"typescript": "^5.5.3"
+	},
+	"dependencies": {
+		"consola": "^3.2.3",
+		"pino": "^9.3.1",
+		"pino-pretty": "^11.2.1",
+		"reflect-metadata": "^0.2.2"
+	}
+}

@@ -1,0 +1,27 @@
+{
+	"name": "@vermi/restapi",
+	"module": "src/index.ts",
+	"main": "dist/index.js",
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"watch": "tsc -w"
+	},
+	"devDependencies": {
+		"@sinclair/typebox": "^0.32.34",
+		"@types/bun": "latest",
+		"@types/pluralize": "^0.0.33",
+		"@vermi/core": "link:@vermi/core",
+		"@vermi/apidocs": "link:@vermi/apidocs",
+		"@vermi/router": "link:@vermi/router",
+		"@vermi/schema": "link:@vermi/schema",
+		"@vermi/utils": "link:@vermi/utils"
+	},
+	"peerDependencies": {
+		"@sinclair/typebox": "^0.32.34",
+		"typescript": "^5.5.3"
+	},
+	"dependencies": {
+		"pluralize": "^8.0.0"
+	}
+}

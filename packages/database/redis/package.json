@@ -1,0 +1,22 @@
+{
+	"name": "@vermi/redis",
+	"module": "src/index.ts",
+	"main": "dist/index.js",
+	"type": "module",
+	"scripts": {
+		"link": "bun link",
+		"build": "tsc",
+		"watch": "tsc -w"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@vermi/core": "link:@vermi/core",
+		"@vermi/utils": "link:@vermi/utils"
+	},
+	"peerDependencies": {
+		"typescript": "^5.5.3"
+	},
+	"dependencies": {
+		"ioredis": "^5.4.1"
+	}
+}

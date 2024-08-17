@@ -6,7 +6,7 @@
 		"@mikro-orm/core": "^6.2.9",
 		"@mikro-orm/postgresql": "^6.2.9",
 		"@msgpack/msgpack": "^3.0.0-beta2",
-		"@sinclair/typebox": "^0.32.31",
+		"@sinclair/typebox": "^0.32.34",
 		"@vermi/apidocs": "link:@vermi/apidocs",
 		"@vermi/apidocs-ui": "link:@vermi/apidocs-ui",
 		"@vermi/auth": "link:@vermi/auth",
@@ -15,6 +15,7 @@
 		"@vermi/mikro-orm": "link:@vermi/mikro-orm",
 		"@vermi/notification": "link:@vermi/notification",
 		"@vermi/rate-limit": "link:@vermi/rate-limit",
+		"@vermi/redis": "link:@vermi/redis",
 		"@vermi/remix": "link:@vermi/remix",
 		"@vermi/restapi": "link:@vermi/restapi",
 		"@vermi/router": "link:@vermi/router",
@@ -29,6 +30,6 @@
 		"@types/bun": "latest"
 	},
 	"peerDependencies": {
-		"typescript": "^5.4.5"
+		"typescript": "^5.5.2"
 	}
 }
