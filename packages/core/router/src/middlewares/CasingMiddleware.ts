@@ -10,7 +10,7 @@ import type { RouterModuleConfig } from "../RouterModule";
 import { AfterRoute, BeforeRoute } from "../decorators";
 import { type CasingType, casingFactory } from "../services";
 
-const getCasing = (context: RequestContext, config: RouterModuleConfig) => {
+const getCasing = (context: RequestContext, config: RouterModuleConfig[]) => {
 	const mount = context.store.route?.mount;
 
 	if (!mount) {
@@ -30,7 +30,7 @@ const getCasing = (context: RequestContext, config: RouterModuleConfig) => {
 
 @Middleware()
 class CasingMiddleware {
-	@Config("RouterModule") config!: RouterModuleConfig;
+	@Config("RouterModule") config!: RouterModuleConfig[];
 
 	shouldProcess(
 		internal: CasingType,

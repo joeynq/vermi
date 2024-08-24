@@ -1,32 +1,31 @@
+import { type Class, ensure, pathIs, tryRun, uuid } from "@vermi/utils";
 import {
-	type Class,
-	deepMerge,
-	ensure,
-	pathIs,
-	tryRun,
-	uuid,
-} from "@vermi/utils";
-import { InjectionMode, Lifetime, asValue, createContainer } from "awilix";
-import type { Server } from "bun";
+	InjectionMode,
+	Lifetime,
+	asClass,
+	asValue,
+	createContainer,
+} from "awilix";
+import { type Server } from "bun";
 import { Module } from "./decorators";
 import { type AppEventMap, AppEvents } from "./events";
 import { HttpException } from "./exceptions";
-import type {
-	AbstractLogger,
-	AppContext,
-	AppOptions,
-	EnhancedContainer,
-	LoggerAdapter,
-	_AppContext,
-	_RequestContext,
+import {
+	type AppContext,
+	type AppOptions,
+	type EnhancedContainer,
+	type LoggerAdapter,
+	type UseParameters,
+	type VermiModuleMethods,
+	type _AppContext,
+	type _RequestContext,
 } from "./interfaces";
+import { LoggerToken } from "./modules";
 import {
 	Configuration,
 	ConsoleLogger,
-	type ConsoleLoggerOptions,
 	ContextService,
 	Hooks,
-	VermiModule,
 } from "./services";
 import { submoduleStore } from "./store";
 import { enhance, registerHooks, registerProviders } from "./utils";
@@ -34,8 +33,7 @@ import { enhance, registerHooks, registerProviders } from "./utils";
 @Module({ deps: [Configuration, Hooks] })
 class AppModule {}
 
-export class Vermi<Log extends object = ConsoleLoggerOptions> {
-	#logger: LoggerAdapter;
+export class Vermi {
 	#container = enhance(
 		createContainer<_AppContext>({
 			injectionMode: InjectionMode.CLASSIC,
@@ -43,9 +41,7 @@ export class Vermi<Log extends object = ConsoleLoggerOptions> {
 		}),
 	);
 
-	#customContext?: (ctx: _RequestContext) => Record<string, unknown>;
-
-	#options: AppOptions<Log>;
+	#options: AppOptions;
 
 	#context = new ContextService();
 
@@ -56,9 +52,7 @@ export class Vermi<Log extends object = ConsoleLoggerOptions> {
 		return hooks;
 	}
 
-	constructor(options?: Partial<AppOptions<Log>>) {
-		this.#logger = new ConsoleLogger(options?.log);
-
+	constructor(options?: Partial<AppOptions>) {
 		this.#options = {
 			modules: new Map(),
 			...options,
@@ -68,12 +62,13 @@ export class Vermi<Log extends object = ConsoleLoggerOptions> {
 	#registerServices() {
 		this.#container.register({
 			appConfig: asValue(this.#options),
-			_logger: asValue(this.#logger),
 			env: asValue(this.#options?.env || {}),
 			app: asValue(this),
+			contextService: asValue(this.#context),
+			[LoggerToken]: asClass(ConsoleLogger),
 			logger: {
 				resolve: (c) => {
-					const _logger = c.resolve<LoggerAdapter>("_logger");
+					const _logger = c.resolve<LoggerAdapter<any>>(LoggerToken);
 
 					if (c.hasRegistration("traceId")) {
 						return _logger.useContext({
@@ -84,14 +79,17 @@ export class Vermi<Log extends object = ConsoleLoggerOptions> {
 				},
 				lifetime: Lifetime.SCOPED,
 			},
-			contextService: asValue(this.#context),
 		});
 	}
 
 	#initModules(context: AppContext) {
-		const modules = Array.from(this.#options.modules.values()).map(
-			({ module }) => module,
-		);
+		const modules = Array.from(this.#options.modules.values())
+			// retrieve the module classes
+			.flatMap((set) => {
+				return Array.from(set).map(({ module }) => module);
+			})
+			// remove duplicates
+			.filter((value, index, self) => self.indexOf(value) === index);
 
 		registerProviders(AppModule, ...modules);
 		registerHooks(context, AppModule, ...modules);
@@ -121,12 +119,6 @@ export class Vermi<Log extends object = ConsoleLoggerOptions> {
 							typeof AppEvents,
 							AppEventMap
 						>;
-
-						for (const [key, value] of Object.entries(
-							this.#customContext?.(stored.cradle) || {},
-						)) {
-							stored.register(key, asValue(value));
-						}
 
 						await hooks.invoke(AppEvents.OnEnterContext, [stored.expose()]);
 
@@ -169,37 +161,13 @@ export class Vermi<Log extends object = ConsoleLoggerOptions> {
 		});
 	}
 
-	useContext<T extends Record<string, unknown>>(
-		getContext: (ctx: _RequestContext) => T,
-	) {
-		this.#customContext = getContext;
-		return this;
-	}
-
-	logger<
-		Logger extends AbstractLogger,
-		Adapter extends Class<LoggerAdapter<Logger>>,
-	>(logger: Adapter, options?: ConstructorParameters<Adapter>[0]) {
-		this.#logger = new logger(options);
-		return this;
-	}
-
-	use<
-		Module extends VermiModule<any>,
-		Config extends Module["config"] = Module["config"],
-	>(module: Class<Module>, options: Config): this;
-	use<
-		Module extends VermiModule<any>,
-		Config extends Module["config"] = Module["config"],
-	>([module, options]: [Class<Module>, Config]): this;
-	use<
-		Module extends VermiModule<any>,
-		Config extends Module["config"] = Module["config"],
-	>(module: Class<Module> | [Class<Module>, Config], options?: Config) {
-		const [mod, config] = Array.isArray(module) ? module : [module, options];
-
-		const useModule = (module: Class<VermiModule<any>>, options: any) => {
-			// if the module depends on other modules, we need to apply them first
+	use<Config, Module extends VermiModuleMethods<Config>>(
+		opts: UseParameters<any>[] | UseParameters<Module>,
+	): this {
+		const useModule = <M extends VermiModuleMethods<any>>(
+			module: Class<M>,
+			conf: M["config"][number],
+		) => {
 			const submodules = submoduleStore.apply(module).get();
 			if (submodules.length) {
 				for (const { module, options } of submodules) {
@@ -207,14 +175,19 @@ export class Vermi<Log extends object = ConsoleLoggerOptions> {
 				}
 			}
 
-			const current = this.#options.modules.get(module.name)?.config;
-			this.#options.modules.set(module.name, {
-				module,
-				config: current ? deepMerge(current, options) : options,
-			});
+			const current = this.#options.modules.get(module.name) || [];
+			current.push({ module, config: conf, id: uuid() });
+
+			this.#options.modules.set(module.name, current);
 		};
 
-		useModule(mod, config);
+		const options = Array.isArray(opts) ? opts : [opts];
+
+		for (const { module, config } of options) {
+			useModule(module, config);
+		}
+
+		// useModule(module, config);
 
 		return this;
 	}
@@ -224,30 +197,20 @@ export class Vermi<Log extends object = ConsoleLoggerOptions> {
 			this.#registerServices();
 			this.#initModules(container.expose());
 
-			const { hooks } = container.cradle;
+			const hooks = container.cradle.hooks;
 
 			await hooks.invoke(AppEvents.OnInit, [container.expose()]);
 
-			const { configuration, logger } = container.cradle;
+			const {
+				configuration: { bunOptions },
+			} = container.cradle;
 
 			const server = Bun.serve({
-				...configuration.bunOptions,
+				...bunOptions,
 				fetch: this.#runInRequestContext.bind(this, container),
 			});
 
 			await hooks.invoke(AppEvents.OnStarted, [container.expose(), server]);
-
-			process.on("SIGINT", async () => {
-				logger.info("Shutting down server...");
-				await hooks.invoke(AppEvents.OnExit, [container.expose(), server]);
-
-				this.#container.dispose();
-
-				server.stop();
-				setTimeout(() => {
-					process.exit();
-				}, 500);
-			});
 
 			onStarted(container.expose(), server);
 		});

@@ -1,5 +1,7 @@
 import { format, omitUndefined, stringify } from "@vermi/utils";
 import { Chalk, type ChalkInstance } from "chalk";
+import { Injectable } from "../decorators";
+import { Option } from "../decorators/Option";
 import { logLevelOrder } from "../enum";
 import type { LogLevel, LogOptions } from "../interfaces";
 import { BaseLogger } from "./BaseLogger";
@@ -12,8 +14,9 @@ export type ConsoleLoggerOptions = {
 	formatDate: (date: Date) => string;
 };
 
+@Injectable()
 export class ConsoleLogger extends BaseLogger<Console> {
-	log = console;
+	provider = console;
 
 	get level(): LogLevel {
 		return this.opts.level ?? "info";
@@ -23,23 +26,24 @@ export class ConsoleLogger extends BaseLogger<Console> {
 		return chalk;
 	}
 
-	opts: LogOptions<ConsoleLoggerOptions>;
+	@Option("log")
+	opts!: LogOptions<ConsoleLogger>;
 
-	constructor(opts?: Partial<LogOptions<Partial<ConsoleLoggerOptions>>>) {
-		super();
-		this.opts = {
+	get options() {
+		return {
 			level: "info",
 			stackTrace: true,
 			noColor: false,
-			...(opts ? omitUndefined(opts) : {}),
-			options: {
-				formatDate: (date: Date) =>
-					date.toISOString().slice(0, 23).replace("T", " "),
-				...(opts?.options ? omitUndefined(opts.options) : {}),
-			},
+			formatDate: (date: Date) =>
+				date.toISOString().slice(0, 23).replace("T", " "),
+			...(this.opts ? omitUndefined(this.opts) : {}),
 		};
+	}
 
-		chalk = new Chalk({ level: !opts?.noColor ? 1 : 0 });
+	constructor() {
+		super();
+
+		chalk = new Chalk({ level: !this.options?.noColor ? 1 : 0 });
 	}
 
 	createChild() {
@@ -69,10 +73,10 @@ export class ConsoleLogger extends BaseLogger<Console> {
 	protected writeLog(level: LogLevel, arg0: any, ...args: any[]) {
 		if (!this.allowLevel(level)) return;
 
-		const log = Object.hasOwn(this.log, level)
+		const log = Object.hasOwn(this.provider, level)
 			? // @ts-expect-error
-				this.log[level]
-			: this.log.log.bind(this.log);
+				this.provider[level]
+			: this.provider.log.bind(this.provider);
 
 		const logObject = typeof arg0 === "object" ? arg0 : undefined;
 		const message = logObject ? args[0] : arg0;
@@ -101,7 +105,7 @@ export class ConsoleLogger extends BaseLogger<Console> {
 	}
 
 	protected logEntry(level: LogLevel, message: string) {
-		const date = chalk.grey(this.opts.options?.formatDate(new Date()));
+		const date = chalk.grey(this.options?.formatDate(new Date()));
 
 		const coloredLevels = {
 			error: this.chalk.red,

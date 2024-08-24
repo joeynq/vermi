@@ -15,6 +15,8 @@ export function Injectable<T extends Class<T>>(
 				value: {
 					lifetime: lifetimeOrOptions,
 				},
+				configurable: true,
+				writable: true,
 			});
 
 			return;

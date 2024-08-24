@@ -1,6 +1,6 @@
 import { decode, encode } from "@msgpack/msgpack";
 import { Injectable } from "@vermi/core";
-import type { Parser } from "./Parser";
+import type { Parser } from "../interfaces";
 
 @Injectable()
 export class MsgPackParser implements Parser {

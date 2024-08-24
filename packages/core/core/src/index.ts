@@ -4,6 +4,7 @@ export * from "./enum";
 export * from "./events";
 export * from "./exceptions";
 export * from "./interfaces";
+export * from "./modules";
 export * from "./services";
 export * from "./store";
 export * from "./utils";

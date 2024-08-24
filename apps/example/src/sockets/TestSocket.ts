@@ -1,6 +1,6 @@
 import { Logger, type LoggerAdapter } from "@vermi/core";
 import { Model, Number, String } from "@vermi/schema";
-import { Message, SocketController, Subscribe } from "@vermi/ws";
+import { On, SocketController } from "@vermi/ws";
 
 @Model()
 class TestModel {
@@ -16,9 +16,15 @@ export class TestSocket {
 	@Logger()
 	logger!: LoggerAdapter;
 
-	@Subscribe("some-message")
-	async onMessage(@Message() message: TestModel) {
+	@On("connect")
+	async onConnect(ctx: any) {
+		this.logger.info("connected");
+		console.log(ctx);
+	}
+
+	@On("message")
+	async onMessage(ctx: any) {
 		this.logger.info("some-message");
-		this.logger.info(JSON.stringify(message));
+		console.log(ctx);
 	}
 }

@@ -10,5 +10,7 @@ export * from "./Interceptor";
 export * from "./Logger";
 export * from "./Middleware";
 export * from "./Module";
+export * from "./Option";
 export * from "./Use";
 export * from "./UseModule";
+export * from "./UseProvider";

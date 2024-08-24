@@ -6,7 +6,7 @@ export const Config = (moduleName?: string): PropertyDecorator => {
 			get: () => {
 				const name = moduleName || target.constructor.name;
 				const configuration = containerRef().resolve("configuration");
-				return configuration.getModuleConfig(name)?.config;
+				return configuration.getModuleConfig(name) || [];
 			},
 			configurable: true,
 		});

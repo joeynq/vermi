@@ -1,4 +1,3 @@
-import type { TSchema } from "@sinclair/typebox";
 import {
 	Configuration,
 	type ContextService,
@@ -7,176 +6,91 @@ import {
 	Injectable,
 	Logger,
 	type LoggerAdapter,
-	asValue,
 } from "@vermi/core";
-import {
-	type Class,
-	type MaybePromiseFunction,
-	createRouter,
-	ensure,
-	tryRun,
-} from "@vermi/utils";
+import { type EventEmitter } from "@vermi/events";
+import { ensure } from "@vermi/utils";
 import type { Server, ServerWebSocket } from "bun";
-import { IncomingMessage, type IncomingMessageDTO } from "../events";
-import {
-	InternalError,
-	InvalidData,
-	WsCloseCode,
-	WsException,
-} from "../exceptions";
-import { type WsEventMap, WsEvents } from "../hooks";
-import type { WsData, _WsContext } from "../interfaces";
+import { WsEvents } from "../hooks";
+import type { Parser, WsData } from "../interfaces";
+import { WsMessage } from "../models";
 import { type EnhancedWebSocket, enhanceWs } from "../utils";
-
-export interface EventMatch {
-	handler: MaybePromiseFunction;
-	channel: `/${string}`;
-	handlerId: string;
-	args: {
-		name: string | symbol;
-		required?: boolean;
-		parameterIndex: number;
-		schema: TSchema;
-		pipes?: Class<any>[];
-	}[];
-}
 
 @Injectable("SINGLETON")
 export class SocketHandler {
-	#sockets = new Map<string, EnhancedWebSocket<WsData>>();
+	#sockets = new Map<string, EnhancedWebSocket>();
 	#server!: Server;
-
-	protected router = createRouter<EventMatch>();
 
 	@Logger() private logger!: LoggerAdapter;
 
 	get context() {
 		ensure(this.contextService.context, "Context not found");
-		return this.contextService.context as EnhancedContainer<_WsContext>;
+		return this.contextService.context as EnhancedContainer<any>;
+	}
+
+	get emitter() {
+		return this.context.resolve<EventEmitter>("ws:emitter");
 	}
 
 	constructor(
 		protected configuration: Configuration,
 		protected contextService: ContextService,
-		protected hooks: Hooks<typeof WsEvents, WsEventMap>,
+		protected hooks: Hooks<typeof WsEvents, any>,
 	) {}
 
-	#prepareContext(_ws: ServerWebSocket<WsData>) {
-		const ws = enhanceWs(_ws, this.context.cradle.parser, this.#server);
-		const context = this.context.createEnhancedScope();
-
-		context.register({
-			traceId: asValue(ws.data.sid),
-			ws: asValue(ws),
-		});
-		return context;
+	#broadcast<Data>(data: Data) {
+		for (const ws of this.#sockets.values()) {
+			this.#emit(ws, "message", data);
+		}
 	}
 
-	#errorHandler(ws: EnhancedWebSocket<WsData>, error: Error) {
-		this.logger.error(error, "Error handling message");
-		if (error instanceof WsException) {
-			return ws.sendEvent("error", error);
-		}
-		const errorEvent = new InternalError(ws.data.sid, error.message, error);
-		return ws.sendEvent("error", errorEvent);
+	#emit<Data>(
+		ws: EnhancedWebSocket,
+		type: (typeof WsMessage)["prototype"]["type"],
+		data?: Data,
+	) {
+		const { sid, namespace } = ws.data;
+		const payload = new WsMessage(sid, type, data);
+
+		this.emitter.emit(namespace, { ws, payload });
 	}
 
 	async #onOpen(ws: ServerWebSocket<WsData>) {
-		return this.contextService.runInContext(
-			this.#prepareContext(ws),
-			async (context: EnhancedContainer<_WsContext>) => {
-				const { ws } = context.cradle;
-				const [error] = await tryRun(async () => {
-					if (!ws.data.sid) {
-						this.logger.error("No sid provided");
-						return ws.close(WsCloseCode.InvalidData, "No sid provided");
-					}
-
-					this.hooks.invoke("ws-hook:open", [context.expose()]);
-
-					ws.subscribe("/");
-
-					this.#sockets.set(ws.data.sid, ws);
-
-					ws.sendEvent("connect", { sid: ws.data.sid });
-					this.logger.info("Client connected with sid: {sid}", {
-						sid: ws.data.sid,
-					});
-				});
-
-				error && this.#errorHandler(ws, error);
-			},
+		const parser = this.context.resolve<Parser>(
+			`ws:parser:${ws.data.namespace}`,
 		);
+		const enhancedWs = enhanceWs(ws, parser, this.#server);
+		enhancedWs.broadcast = this.#broadcast.bind(this);
+
+		this.#sockets.set(ws.data.sid, enhancedWs);
+
+		ws.subscribe(ws.data.namespace);
+
+		this.logger.info(`Client connected with sid: ${ws.data.sid}`);
+
+		this.#emit(enhancedWs, "connect");
 	}
 
-	async #onMessage(ws: ServerWebSocket<WsData>, message: Buffer) {
-		return this.contextService.runInContext(
-			this.#prepareContext(ws),
-			async (context: EnhancedContainer<_WsContext>) => {
-				const { ws, parser } = context.cradle;
-				const [error] = await tryRun(async () => {
-					const { channel, sid, type, data } =
-						parser.decode<IncomingMessageDTO<any>>(message);
+	async #onMessage(_ws: ServerWebSocket<WsData>, message: Buffer) {
+		const ws = this.#sockets.get(_ws.data.sid);
+		ensure(ws, "Socket not found");
 
-					const event = new IncomingMessage(sid, type, channel, data);
+		this.logger.info(`Received message from sid: ${ws.data.sid}.`);
 
-					context.register("event", asValue(event));
-
-					await this.hooks.invoke(WsEvents.InitEvent, [context.expose()]);
-
-					if (!(event instanceof IncomingMessage)) {
-						throw new InvalidData(ws.data.sid, "Invalid message type");
-					}
-
-					const result = this.router.lookup(
-						`/${event.type}${ws.data.path}${event.channel}`,
-					);
-
-					if (!result) {
-						throw new InvalidData(ws.data.sid, "Event is not handled");
-					}
-
-					const { handler, handlerId } = result;
-
-					context.register({
-						params: asValue(result.params || {}),
-						matchData: asValue(result),
-					});
-
-					await this.hooks.invoke(WsEvents.Guard, [context.expose(), result], {
-						when: (scope: string) => scope === handlerId,
-					});
-
-					await handler(context.expose());
-				});
-
-				error && this.#errorHandler(ws, error);
-			},
-		);
+		this.#emit(ws, "message", ws.parser.decode(message));
 	}
-	async #onClose(ws: ServerWebSocket<WsData>, code: number, reason?: string) {
-		return this.contextService.runInContext(
-			this.#prepareContext(ws),
-			async (context: EnhancedContainer<_WsContext>) => {
-				const { ws } = context.cradle;
+	async #onClose(_ws: ServerWebSocket<WsData>, code: number, reason?: string) {
+		const ws = this.#sockets.get(_ws.data.sid);
+		ensure(ws, "Socket not found");
 
-				const [error] = await tryRun(async () => {
-					this.hooks.invoke("ws-hook:close", [context.expose(), code, reason]);
+		ws.unsubscribe("/");
 
-					ws.unsubscribe("/");
-					this.#sockets.delete(ws.data.sid);
-				});
+		this.logger.info("Client disconnected with sid: {sid}", {
+			sid: ws.data.sid,
+		});
 
-				error && this.#errorHandler(ws, error);
-			},
-		);
-	}
+		this.#emit(ws, "disconnect", { code, reason });
 
-	addEvent(event: string, handler: EventMatch) {
-		const current = this.router.lookup(event);
-		if (!current) {
-			this.router.insert(event, handler);
-		}
+		this.#sockets.delete(ws.data.sid);
 	}
 
 	buildHandler(): void {

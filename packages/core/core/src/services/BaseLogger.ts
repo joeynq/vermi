@@ -7,9 +7,10 @@ import type {
 } from "../interfaces";
 
 export abstract class BaseLogger<Logger extends AbstractLogger>
-	implements LoggerAdapter
+	implements LoggerAdapter<Logger>
 {
-	log!: Logger;
+	type = "logger" as const;
+	provider!: Logger;
 	abstract level: LogLevel;
 
 	context?: LoggerContext;
@@ -17,7 +18,7 @@ export abstract class BaseLogger<Logger extends AbstractLogger>
 	protected abstract createChild(context: any): Logger;
 
 	setLogger(logger: Logger) {
-		this.log = logger;
+		this.provider = logger;
 	}
 
 	useContext(context: LoggerContext) {
@@ -30,23 +31,23 @@ export abstract class BaseLogger<Logger extends AbstractLogger>
 	}
 
 	info(arg: any, ...args: any[]) {
-		this.log.info(...this.#formatMessage(arg, ...args));
+		this.provider.info(...this.#formatMessage(arg, ...args));
 	}
 
 	error(arg: any, ...args: any[]) {
-		this.log.error(...this.#formatMessage(arg, ...args));
+		this.provider.error(...this.#formatMessage(arg, ...args));
 	}
 
 	warn(arg: any, ...args: any[]) {
-		this.log.warn(...this.#formatMessage(arg, ...args));
+		this.provider.warn(...this.#formatMessage(arg, ...args));
 	}
 
 	debug(arg: any, ...args: any[]) {
-		this.log.debug(arg, ...args);
+		this.provider.debug(arg, ...args);
 	}
 
 	trace(arg: any, ...args: any[]) {
-		this.log.trace(...this.#formatMessage(arg, ...args));
+		this.provider.trace(...this.#formatMessage(arg, ...args));
 	}
 
 	#formatMessage(arg: any, ...args: any[]): any[] {

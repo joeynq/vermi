@@ -1,1 +1,0 @@
-export { useKafkaConsumer } from "./useKafkaConsumer";

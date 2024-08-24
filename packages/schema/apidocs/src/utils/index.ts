@@ -4,7 +4,6 @@ export * from "./buildRequestBody";
 export * from "./buildResponses";
 export * from "./changePropCase";
 export * from "./createResponse";
-export * from "../../../../core/schema/src/utils/generic";
 export * from "./getNames";
 export * from "./referTo";
 export * from "./removeUnused";

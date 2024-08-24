@@ -1,4 +1,4 @@
-import type { EnhancedContainer, _AppContext } from "@vermi/core";
+import type { ExposedContext, _AppContext } from "@vermi/core";
 import type { ConsumerAdapter } from "./ConsumerAdapter";
 
 export interface EventType<Payload> {
@@ -9,11 +9,12 @@ export interface EventType<Payload> {
 }
 
 export interface _EventContext<Payload, Client> extends _AppContext {
-	payload: EventType<Payload>;
+	event: EventType<Payload>;
 	consumer: ConsumerAdapter<Client>;
 	group: string;
+	[key: string]: any;
 }
 
-export type EventContext<Payload, Client> = EnhancedContainer<
+export type EventContext<Payload, Client> = ExposedContext<
 	_EventContext<Payload, Client>
 >;

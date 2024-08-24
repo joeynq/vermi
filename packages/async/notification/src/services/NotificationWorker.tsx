@@ -1,5 +1,5 @@
 import { parentPort } from "node:worker_threads";
-import type { AnyClass } from "../../../../core/utils/dist";
+import type { Class } from "@vermi/utils";
 import type { NotificationAdapter, NotificationEvent } from "../interfaces";
 
 declare let self: Worker;
@@ -12,7 +12,7 @@ self.addEventListener("message", async (event: NotificationEvent) => {
 	const { channel, content, ...rest } = event.data.sendOptions;
 
 	const Adapter = (await import(`../channels/${channel}`).catch(log)) as {
-		default: AnyClass<NotificationAdapter>;
+		default: Class<NotificationAdapter<any, any>>;
 	};
 
 	await new Adapter.default(event.data.config).send({ content, ...rest });

@@ -1,47 +1,32 @@
-const ws = new WebSocket("ws://localhost:3000/ws");
+const ws = new WebSocket("ws://localhost:3000/test");
 
-let sid = "";
+const sid = "";
 
 ws.onmessage = (event) => {
-	const data = JSON.parse(new TextDecoder().decode(event.data));
-
-	if (data.sid) {
-		console.log("Received sid", data);
-	}
-
-	if (data.sid && data.type === "connect") {
-		console.log("Connected");
-		sid = data.sid;
-
-		ws.send(
-			new TextEncoder().encode(
-				JSON.stringify({
-					sid,
-					type: "subscribe",
-					channel: "/",
-					data: "/test",
-				}),
-			),
-		);
-	}
+	console.log("Received message", event.data);
 };
 
-setInterval(() => {
-	if (!sid) {
-		return;
-	}
-	console.log("Sending message");
-	ws.send(
-		new TextEncoder().encode(
-			JSON.stringify({
-				sid,
-				type: "some-message",
-				channel: "/test",
-				data: {
-					foo: "bar",
-					bar: 123,
-				},
-			}),
-		),
-	);
-}, 2000);
+ws.onopen = () => {
+	console.log("Connected");
+	ws.send(new TextEncoder().encode(JSON.stringify("Test message")));
+};
+
+// setInterval(() => {
+// 	if (!sid) {
+// 		return;
+// 	}
+// 	console.log("Sending message");
+// 	ws.send(
+// 		new TextEncoder().encode(
+// 			JSON.stringify({
+// 				sid,
+// 				type: "some-message",
+// 				channel: "/test",
+// 				data: {
+// 					foo: "bar",
+// 					bar: 123,
+// 				},
+// 			}),
+// 		),
+// 	);
+// }, 2000);

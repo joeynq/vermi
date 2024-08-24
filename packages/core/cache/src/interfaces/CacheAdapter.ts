@@ -1,8 +1,14 @@
-export interface CacheAdapter<Data, Connection> {
-	connection?: Connection;
-	init?(): Promise<void>;
-	get(key: string): Promise<Data | undefined>;
-	set(key: string, value: Data, ttl?: number): Promise<void>;
-	delete(key: string): Promise<void>;
-	clear(): Promise<void>;
+import type { AdapterMethods } from "@vermi/core";
+
+export abstract class CacheAdapter<Connection>
+	implements AdapterMethods<Connection>
+{
+	type = "cache" as const;
+	provider!: Connection;
+	init?: () => Promise<void>;
+
+	abstract get<Data>(key: string): Promise<Data | undefined>;
+	abstract set<Data>(key: string, value: Data, ttl?: number): Promise<void>;
+	abstract delete(key: string): Promise<void>;
+	abstract clear(): Promise<void>;
 }

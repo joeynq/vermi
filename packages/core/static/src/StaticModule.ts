@@ -1,5 +1,6 @@
-import { Cache, type CacheAdapter } from "@vermi/cache";
+import { type CacheAdapter } from "@vermi/cache";
 import {
+	type AppContext,
 	AppHook,
 	Config,
 	HttpException,
@@ -51,10 +52,9 @@ interface StaticCache {
 }
 
 @Module()
-export class StaticModule extends VermiModule<StaticModuleOptions[]> {
+export class StaticModule extends VermiModule<StaticModuleOptions> {
 	@Logger() private logger!: LoggerAdapter;
 	@Config() public config!: StaticModuleOptions[];
-	@Cache() cache?: CacheAdapter<StaticCache, any>;
 
 	#getHeaders(config: StaticModuleOptions, etag?: string) {
 		const { immutable, maxAge } = config;
@@ -77,23 +77,33 @@ export class StaticModule extends VermiModule<StaticModuleOptions[]> {
 	}
 
 	@AppHook("app:init")
-	public async onInit() {
-		for (const { assetsDir } of this.config) {
+	public async onInit(context: AppContext) {
+		for (const { assetsDir, cache } of this.config) {
+			if (cache) {
+				context.register("static:cache", {
+					resolve: (ctx) => {
+						return ctx.resolve<CacheAdapter<any>>(cache);
+					},
+				});
+			}
 			this.logger.info(`StaticModule initialized. ${assetsDir}`);
 		}
 	}
 
 	async lookup(
-		requestUrl: string,
+		context: RequestContext,
 	): Promise<[BunFile, StaticModuleOptions] | undefined> {
-		const cached = await this.cache?.get(requestUrl);
+		const requestUrl = context.store.request.url;
+		const cache = context.resolve<CacheAdapter<any>>("static:cache");
+
+		const cached = await cache?.get<StaticCache>(requestUrl);
 
 		if (cached) {
 			const file = Bun.file(cached.path);
 			if (await file.exists()) {
 				return [file, cached.config];
 			}
-			await this.cache?.delete(requestUrl);
+			await cache?.delete(requestUrl);
 		}
 
 		let relPath = pathname(requestUrl);
@@ -121,7 +131,7 @@ export class StaticModule extends VermiModule<StaticModuleOptions[]> {
 				: `${process.cwd()}${assetsDir}${relPath}`;
 			const file = Bun.file(filePath);
 			if (await file.exists()) {
-				await this.cache?.set(requestUrl, { path: filePath, config: conf });
+				await cache?.set(requestUrl, { path: filePath, config: conf });
 				return file;
 			}
 		};
@@ -153,7 +163,7 @@ export class StaticModule extends VermiModule<StaticModuleOptions[]> {
 		try {
 			const { request } = context.store;
 
-			const found = await this.lookup(request.url);
+			const found = await this.lookup(context);
 
 			if (!found) {
 				return;

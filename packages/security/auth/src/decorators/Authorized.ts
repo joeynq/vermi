@@ -8,7 +8,7 @@ import {
 	useDecorators,
 } from "@vermi/core";
 import { Guard, Matched, Unauthorized, routeStore } from "@vermi/router";
-import { camelCase } from "@vermi/utils";
+import { extendedCamelCase } from "@vermi/utils";
 import type { JWTVerifyResult } from "jose";
 
 @Middleware()
@@ -16,7 +16,7 @@ class AuthorizedMiddleware {
 	@Logger() logger!: LoggerAdapter;
 
 	isEnabled(ctx: RequestContext) {
-		return !!ctx.resolve(camelCase("AuthModule"));
+		return !!ctx.resolve(extendedCamelCase("AuthModule"));
 	}
 
 	@Matched()

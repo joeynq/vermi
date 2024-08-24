@@ -31,19 +31,5 @@ export class ContextService {
 		return store.run(context, async () => {
 			cb(store.getStore() as EnhancedContainer<Context>);
 		});
-
-		// const [error, result] = await tryRun(async () => {
-		// 	this.setContext(context);
-		// 	return cb(store.getStore() as EnhancedContainer<Context>);
-		// });
-
-		// this.clearContext(exitCb);
-
-		// if (error) {
-		// 	context.cradle.logger.error(error);
-		// 	return Promise.reject(error);
-		// }
-
-		// return result;
 	}
 }

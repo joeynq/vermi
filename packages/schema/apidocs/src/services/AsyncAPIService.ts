@@ -1,6 +1,6 @@
 import { type TSchema, Type } from "@sinclair/typebox";
 import { getSchemas } from "@vermi/schema";
-import { camelCase } from "@vermi/utils";
+import { extendedCamelCase } from "@vermi/utils";
 import { WsException, getWsEvents } from "@vermi/ws";
 import type { AsyncAPIConfig } from "../interfaces";
 import type {
@@ -82,11 +82,11 @@ export class AsyncAPIService extends BaseAPIService<AsyncAPIConfig> {
 
 		for (const [channel, messages] of events) {
 			const channelObject: ChannelObject = { messages: {} };
-			const channelName = camelCase(channel) || "root";
+			const channelName = extendedCamelCase(channel, "/") || "root";
 			for (const message of messages) {
 				const { event, args, handlerId, prefix } = message;
 
-				const serverName = camelCase(prefix);
+				const serverName = extendedCamelCase(prefix);
 				const address = channel.replace(prefix, "");
 				if (!specs.servers[serverName]) {
 					specs.servers[serverName] = {
@@ -97,7 +97,7 @@ export class AsyncAPIService extends BaseAPIService<AsyncAPIConfig> {
 				}
 
 				channelObject.address = address;
-				specs.operations[camelCase(handlerId)] = {
+				specs.operations[extendedCamelCase(handlerId)] = {
 					action: "receive",
 					channel: { $ref: `#/channels/${channelName}` },
 				};

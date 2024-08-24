@@ -50,16 +50,16 @@ export type RouterOptions = {
 	};
 };
 
-export type RouterModuleConfig = Array<{
+export type RouterModuleConfig = {
 	mount: SlashedPath;
 	controllers: Class<any>[];
 	options?: RouterOptions;
-}>;
+};
 
 @Module({ deps: [Router] })
 export class RouterModule extends VermiModule<RouterModuleConfig> {
 	@Logger() private logger!: LoggerAdapter;
-	@Config() public config!: RouterModuleConfig;
+	@Config() public config!: RouterModuleConfig[];
 
 	constructor(protected router: Router) {
 		super();

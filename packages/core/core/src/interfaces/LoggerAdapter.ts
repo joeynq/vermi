@@ -1,5 +1,6 @@
-import type { AnyFunction, Dictionary } from "@vermi/utils";
-import type { ConsoleLoggerOptions } from "../services";
+import type { AnyFunction } from "@vermi/utils";
+import type { ConsoleLogger } from "../services";
+import type { AdapterMethods, WithAdapter } from "./AdapterMethods";
 import type { _RequestContext } from "./Context";
 
 export type LogLevel =
@@ -13,14 +14,12 @@ export type LogLevel =
 
 export type LoggerContext = Pick<_RequestContext, "traceId">;
 
-export interface LogOptions<
-	Logger extends Dictionary | object = ConsoleLoggerOptions,
-> {
+export interface LogOptions<Logger extends AbstractLogger = ConsoleLogger>
+	extends WithAdapter<LoggerAdapter<Logger>> {
 	context?: LoggerContext;
 	noColor?: boolean;
 	level?: LogLevel;
 	stackTrace?: boolean;
-	options?: Logger extends Dictionary | object ? Logger : never;
 }
 
 export interface LogFn {
@@ -37,8 +36,10 @@ export interface AbstractLogger {
 	trace: AnyFunction;
 }
 
-export interface LoggerAdapter<Logger extends AbstractLogger = AbstractLogger> {
-	log: Logger;
+export interface LoggerAdapter<Logger extends AbstractLogger = AbstractLogger>
+	extends AdapterMethods<Logger> {
+	type: "logger";
+	provider: Logger;
 	level: LogLevel;
 	context?: LoggerContext;
 

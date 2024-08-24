@@ -1,4 +1,3 @@
-export * from "./Consumer";
 export * from "./Emitter";
 export * from "./On";
 export * from "./Payload";

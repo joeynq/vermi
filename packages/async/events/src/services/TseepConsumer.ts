@@ -4,9 +4,11 @@ import { AbstractConsumer } from "./AbstractConsumer";
 
 @Injectable("SINGLETON")
 export class TseepConsumer extends AbstractConsumer<EventEmitter> {
-	client!: EventEmitter;
+	provider!: EventEmitter;
 
 	subscribe<Payload>(event: string, handler: (payload: Payload) => void): void {
-		this.client.on(event, handler);
+		this.provider.on(event, handler);
 	}
 }
+
+export { EventEmitter };

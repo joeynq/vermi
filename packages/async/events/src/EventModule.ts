@@ -5,40 +5,25 @@ import {
 	Configuration,
 	Module,
 	VermiModule,
-	asClass,
 	asValue,
+	registerAdapter,
 	registerHooks,
 	registerProviders,
 } from "@vermi/core";
-import type { Class } from "@vermi/utils";
 import { EventEmitter } from "tseep";
-import type { ConsumerAdapter } from "./interfaces";
-import { EventHandlerService, TseepConsumer } from "./services";
-
-export interface DefaultEventModuleConfig {
-	traceId?: <Payload>(payload: Payload) => string;
-	subscribers: Class<any>[];
-}
-
-export interface WithConsumerConfig<Client> extends DefaultEventModuleConfig {
-	consumer: {
-		group: string;
-		adapter: Class<ConsumerAdapter<Client>>;
-		client: Client | ((ctx: AppContext) => Client);
-	};
-}
-
-export type EventModuleConfig<Client> =
-	| WithConsumerConfig<Client>
-	| DefaultEventModuleConfig;
+import { EventEmitterKey } from "./consts";
+import type { EventConfig } from "./interfaces";
+import { AbstractConsumer, EventHandlerService } from "./services";
 
 @Module({ deps: [EventHandlerService] })
-export class EventModule extends VermiModule<EventModuleConfig<any>[]> {
-	@Config() public config!: EventModuleConfig<any>[];
+export class EventModule<
+	Adapter extends AbstractConsumer<any>,
+> extends VermiModule<EventConfig<Adapter>> {
+	@Config() public config!: EventConfig<Adapter>[];
 
 	constructor(
 		protected configuration: Configuration,
-		protected eventHandler: EventHandlerService,
+		protected eventHandlerService: EventHandlerService,
 	) {
 		super();
 	}
@@ -48,27 +33,35 @@ export class EventModule extends VermiModule<EventModuleConfig<any>[]> {
 		const config = this.config;
 
 		const defaultClient = new EventEmitter();
-		ctx.register("events:emitter", asValue(defaultClient));
+		ctx.register(EventEmitterKey, asValue(defaultClient));
 
 		for (const item of config) {
-			const { subscribers } = item;
-			const adapterClass =
-				"consumer" in item ? item.consumer.adapter : TseepConsumer;
-			const group = "consumer" in item ? item.consumer.group : "default";
+			const { subscribers, group = "default", hooks, traceId } = item;
 
-			const resolver = asClass(adapterClass).disposer((instance) =>
-				instance.destroy(),
+			const instance = await registerAdapter(ctx, item, (instance) =>
+				instance.init({ ...item, group }),
 			);
-			const adapter = ctx.build(resolver);
-			"consumer" in item && (await adapter.init(ctx, item.consumer));
-
-			ctx.register(`events:consumer:${group}`, asValue(adapter));
 
 			registerProviders(...subscribers);
 			registerHooks(ctx, ...subscribers);
 			for (const subscriber of subscribers) {
-				this.eventHandler.buildHandlers(item, adapter, subscriber);
+				this.eventHandlerService.buildHandlers(
+					{ group, traceId },
+					instance,
+					subscriber,
+				);
 			}
+
+			await hooks?.init?.(ctx, item);
+		}
+	}
+
+	@AppHook("app:exit")
+	async destroy(ctx: AppContext) {
+		const config = this.config;
+
+		for (const item of config) {
+			await item.hooks?.destroy?.(ctx, item);
 		}
 	}
 }

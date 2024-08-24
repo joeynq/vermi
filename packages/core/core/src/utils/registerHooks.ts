@@ -1,4 +1,4 @@
-import { type Class, camelCase } from "@vermi/utils";
+import { type Class, extendedCamelCase } from "@vermi/utils";
 import { asValue } from "awilix";
 import type { AppContext } from "../interfaces";
 import { type Hooks, containerRef } from "../services";
@@ -16,7 +16,7 @@ export const registerHooks = (
 			for (const { target, handler, scope } of handlers) {
 				const useTarget = target?.name && target.name !== provider.name;
 				const instance = containerRef().resolve<any>(
-					camelCase(useTarget ? target.name : provider.name),
+					extendedCamelCase(useTarget ? target.name : provider.name),
 				);
 				hooks.register(event, {
 					target: useTarget ? target : undefined,

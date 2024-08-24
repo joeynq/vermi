@@ -1,5 +1,5 @@
 import { Injectable } from "@vermi/core";
-import type { Parser } from "./Parser";
+import type { Parser } from "../interfaces";
 
 @Injectable()
 export class JsonParser implements Parser {

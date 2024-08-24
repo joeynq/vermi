@@ -1,57 +1,43 @@
 import { render } from "@react-email/render";
 import { Config, Injectable } from "@vermi/core";
 import type { FC } from "react";
-import type { AdapterConfigMap, SendWithTemplateOptions } from "../interfaces";
+import type { NotificationModuleConfig } from "../nofitication";
 
-interface NotificationServiceOptions {
-	channels: Partial<AdapterConfigMap>;
-	templates: Record<string, FC>;
-}
+// interface NotificationServiceOptions {
+// 	channels: Partial<AdapterConfigMap>;
+// 	templates: Record<string, FC>;
+// }
 
-@Injectable("SINGLETON")
-export class NotificationService {
-	#worker: Worker;
-
+@Injectable("TRANSIENT")
+export class NotificationService<
+	TemplateMap extends Record<string, Record<string, FC>> = Record<
+		string,
+		Record<string, FC>
+	>,
+> {
 	@Config("NotificationModule")
-	config!: NotificationServiceOptions;
+	config!: NotificationModuleConfig<any, any>[];
 
-	constructor() {
-		this.#worker = this.#createWorker();
+	get templates() {
+		return this.config.reduce((acc, { channel, templates }) => {
+			// @ts-ignore
+			acc[channel] = templates;
+			return acc;
+		}, {} as TemplateMap);
 	}
 
-	#createWorker() {
-		const url = new URL("./NotificationWorker", import.meta.url).href;
-		return new Worker(url);
-	}
-
-	#compileTemplate(template: string, data: any) {
-		const Template = this.config.templates[template];
+	#compileTemplate(Template: FC, data: any) {
 		return render(<Template {...data} />);
 	}
 
-	onMessage(callback: (message: any) => void) {
-		this.#worker.addEventListener("message", (event) => {
-			callback(event.data);
-		});
-	}
+	send<Data>(
+		channel: keyof TemplateMap,
+		templateName: keyof TemplateMap[keyof TemplateMap],
+		data: Data,
+	) {
+		const template = this.templates[channel][templateName];
+		const content = this.#compileTemplate(template, data);
 
-	onError(callback: (error: string) => void) {
-		this.#worker.addEventListener("error", (event) => {
-			callback(event.message);
-		});
-	}
-
-	unmount() {
-		this.#worker.terminate();
-	}
-
-	send<C extends keyof AdapterConfigMap>(options: SendWithTemplateOptions<C>) {
-		const content = this.#compileTemplate(options.template, options.data);
-
-		this.#worker.postMessage({
-			config: this.config.channels[options.channel],
-			// @ts-ignore
-			sendOptions: { ...options, content },
-		});
+		// const adapter
 	}
 }

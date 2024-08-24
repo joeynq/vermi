@@ -4,7 +4,7 @@ import type { Class } from "@vermi/utils";
 
 export const EventStoreKey = Symbol("EventStoreKey");
 
-export type EventFilter = <Payload = any>(event: Payload) => boolean;
+export type EventFilter<Payload = any> = (event: Payload) => boolean;
 
 export interface HandlerMetadata {
 	filter: EventFilter;

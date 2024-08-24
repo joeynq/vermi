@@ -3,7 +3,8 @@ import type { AwilixContainer } from "awilix";
 import type { SocketAddress } from "bun";
 import type { Vermi } from "../Vermi";
 import type { Configuration, ContextService, Hooks } from "../services";
-import type { LoggerAdapter } from "./LoggerAdapter";
+import type { AppOptions } from "./AppOptions";
+import type { AbstractLogger, LoggerAdapter } from "./LoggerAdapter";
 
 export type InjectionToken<T> = string | symbol | (new (...args: any[]) => T);
 
@@ -21,8 +22,9 @@ export interface EnhancedContainer<Context extends object>
 
 export interface _AppContext {
 	env: Dictionary<unknown>;
-	app: Vermi<any>;
-	logger: LoggerAdapter;
+	appConfig: AppOptions;
+	app: Vermi;
+	logger: LoggerAdapter<AbstractLogger>;
 	hooks: Hooks<Dictionary<string>, Dictionary<MaybePromiseFunction>>;
 	configuration: Configuration;
 	contextService: ContextService;
@@ -39,6 +41,7 @@ export interface _RequestContext extends _AppContext {
 
 export type ExposedContext<Context extends object = _RequestContext> = {
 	store: Context;
+	registered: () => string[];
 	resolve: <T>(token: InjectionToken<T>) => T;
 	register: EnhancedContainer<Context>["register"];
 	build: EnhancedContainer<Context>["build"];

@@ -19,6 +19,13 @@ export enum WsCloseCode {
 	TlsHandshake = 1015,
 }
 
+export interface WsExceptionDTO {
+	code: number;
+	reason: string;
+	sid: string;
+	trace?: string;
+}
+
 export class WsException<
 	Code extends EnumValues<typeof WsCloseCode, number> = EnumValues<
 		typeof WsCloseCode,
@@ -39,5 +46,14 @@ export class WsException<
 		public cause?: Error,
 	) {
 		super(reason, { cause });
+	}
+
+	toJSON(): WsExceptionDTO {
+		return {
+			code: this.code,
+			reason: this.reason,
+			sid: this.sid,
+			trace: this.cause?.stack,
+		};
 	}
 }

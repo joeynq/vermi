@@ -2,6 +2,6 @@ export type SlashedPath = `/${string}`;
 
 export interface WsData {
 	sid: string;
-	path: SlashedPath;
+	namespace: SlashedPath;
 	[key: string]: any;
 }

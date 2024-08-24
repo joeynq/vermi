@@ -9,9 +9,9 @@
 	},
 	"devDependencies": {
 		"@msgpack/msgpack": "^3.0.0-beta2",
-		"@sinclair/typebox": "^0.32.34",
 		"@types/bun": "latest",
 		"@vermi/core": "link:@vermi/core",
+		"@vermi/events": "link:@vermi/events",
 		"@vermi/schema": "link:@vermi/schema",
 		"@vermi/utils": "link:@vermi/utils"
 	},

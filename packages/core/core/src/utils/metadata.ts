@@ -1,8 +1,8 @@
 import {
 	type Class,
 	type DeepPartial,
-	camelCase,
 	deepMerge,
+	extendedCamelCase,
 	isClass,
 	isInstance,
 } from "@vermi/utils";
@@ -40,13 +40,13 @@ export const mergeMetadata = <T extends object = object>(
 
 export const getTokenName = (token: string | symbol | Class<any>): string => {
 	if (typeof token === "symbol") {
-		return camelCase(token.description || token.toString());
+		return extendedCamelCase(token.description || token.toString());
 	}
 	if (isClass(token)) {
-		return camelCase(token.name);
+		return extendedCamelCase(token.name);
 	}
 	if (isInstance(token)) {
-		return camelCase(token.constructor.name);
+		return extendedCamelCase(token.constructor.name);
 	}
-	return camelCase(token);
+	return extendedCamelCase(token);
 };

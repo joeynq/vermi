@@ -5,10 +5,10 @@ import {
 	aliasTo,
 	asValue,
 } from "@vermi/core";
-import { type Class, ensure, uuid } from "@vermi/utils";
-import type { EventModuleConfig } from "../EventModule";
+import { type Class, ensure, extendedCamelCase, uuid } from "@vermi/utils";
 import type {
 	ConsumerAdapter,
+	ContextWithPayload,
 	EventHandler,
 	EventType,
 	_EventContext,
@@ -39,48 +39,79 @@ export class EventHandlerService {
 		};
 	}
 
-	#prepareContext<Payload>(group: string, payload: Payload, traceId?: string) {
+	#prepareContext<Payload>(
+		group: string,
+		{ payload, ...rest }: ContextWithPayload<Payload>,
+		traceId?: string,
+	) {
 		const context = this.context.createEnhancedScope();
 		context.register({
 			consumer: aliasTo(`events:consumer:${group}`),
 			event: asValue(this.#createEvent(group, payload, traceId)),
 			group: asValue(group),
+			traceId: asValue(traceId),
 		});
+		for (const [key, value] of Object.entries(rest)) {
+			context.register({ [key]: asValue(value) });
+		}
 		return context;
 	}
 
 	#buildHandler(
-		config: EventModuleConfig<any>,
+		config: { group: string; traceId?: (payload: any) => string },
 		store: EventStore,
 		metadata: HandlerMetadata,
 	) {
 		const { propertyKey, handlerId } = metadata;
-		const handler: EventHandler = async (payload: any) => {
-			if (!metadata.filter(payload)) {
+		const handler: EventHandler = async (
+			context: ContextWithPayload<EventType<any>>,
+		) => {
+			if (!metadata.filter(context.payload)) {
 				return;
 			}
 			return new Promise((resolve, reject) => {
 				this.contextService.runInContext<_EventContext<any, any>, any>(
-					this.#prepareContext(store.group, payload, config.traceId?.(payload)),
+					this.#prepareContext(
+						store.group,
+						context,
+						config.traceId?.(context.payload),
+					),
 					async (ctx) => {
-						await ctx.cradle.hooks.invoke("events:beforeHandle", [ctx], {
-							when: (scope) => scope === handlerId,
-						});
 						try {
-							const instance = ctx.resolve(store.target.name) as any;
-							const result = await instance[propertyKey](ctx);
+							await ctx.cradle.hooks.invoke("events:guard", [ctx.expose()], {
+								when: (scope) => scope === handlerId,
+							});
+
+							await ctx.cradle.hooks.invoke(
+								"events:beforeHandle",
+								[ctx.expose()],
+								{
+									when: (scope) => scope === handlerId,
+								},
+							);
+
+							ctx.register({ event: asValue(context.payload) });
+
+							const instance = ctx.resolve(
+								extendedCamelCase(store.target.name),
+							) as any;
+							const result = await instance[propertyKey](ctx.expose());
 							await ctx.cradle.hooks.invoke(
 								"events:afterHandle",
-								[ctx, result],
+								[ctx.expose(), result],
 								{
 									when: (scope) => scope === handlerId,
 								},
 							);
 							resolve(result);
 						} catch (err) {
-							await ctx.cradle.hooks.invoke("events:error", [ctx, err], {
-								when: (scope) => scope === handlerId,
-							});
+							await ctx.cradle.hooks.invoke(
+								"events:error",
+								[ctx.expose(), err],
+								{
+									when: (scope) => scope === handlerId,
+								},
+							);
 							reject(err);
 						}
 					},
@@ -88,16 +119,16 @@ export class EventHandlerService {
 			});
 		};
 
-		handler.name = metadata.handlerId;
+		Object.defineProperty(handler, "name", { value: handlerId });
+
 		return handler;
 	}
 
 	buildHandlers(
-		config: EventModuleConfig<any>,
+		config: { group: string; traceId?: (payload: any) => string },
 		adapter: ConsumerAdapter<any>,
 		subscriber: Class<any>,
 	) {
-		const group = "consumer" in config ? config.consumer.group : "default";
 		const store = eventStore.apply(subscriber).get();
 		for (const { handlerId, propertyKey, filter } of store.events) {
 			const handler = this.#buildHandler(config, store, {
@@ -105,7 +136,7 @@ export class EventHandlerService {
 				propertyKey,
 				filter,
 			});
-			adapter.subscribe(group, handler);
+			adapter.subscribe(config.group, handler);
 		}
 	}
 }

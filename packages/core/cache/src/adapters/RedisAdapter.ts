@@ -1,12 +1,12 @@
+import { Injectable } from "@vermi/core";
 import { ensure, stringify } from "@vermi/utils";
 import { Redis } from "ioredis";
-import type { CacheAdapter } from "../interfaces";
+import { CacheAdapter } from "../interfaces";
 
-export class RedisAdapter<Data = any> implements CacheAdapter<Data, Redis> {
-	connection!: Redis;
-
+@Injectable("SINGLETON")
+export class RedisAdapter extends CacheAdapter<Redis> {
 	async get(key: string) {
-		const value = await this.connection.get(key);
+		const value = await this.provider.get(key);
 		return value ? JSON.parse(value) : null;
 	}
 
@@ -15,16 +15,16 @@ export class RedisAdapter<Data = any> implements CacheAdapter<Data, Redis> {
 		ensure(val, new Error("Value must be defined"));
 
 		if (ttl) {
-			await this.connection.set(key, val, "EX", ttl);
+			await this.provider.set(key, val, "EX", ttl);
 		}
-		await this.connection.set(key, val);
+		await this.provider.set(key, val);
 	}
 
 	async delete(key: string) {
-		await this.connection.del(key);
+		await this.provider.del(key);
 	}
 
 	async clear() {
-		await this.connection.flushall();
+		await this.provider.flushall();
 	}
 }

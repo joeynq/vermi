@@ -22,6 +22,9 @@ export const enhance = <T extends object>(container: AwilixContainer<T>) => {
 				get store() {
 					return container.cradle;
 				},
+				registered: () => {
+					return Object.keys(container.registrations);
+				},
 				resolve: <T>(token: InjectionToken<T>) => {
 					const tokenName = getTokenName(token);
 

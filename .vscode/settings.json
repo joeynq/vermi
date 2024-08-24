@@ -12,6 +12,7 @@
 		"bunx",
 		"commitlint",
 		"conformato",
+		"consola",
 		"Consola",
 		"datasource",
 		"deburr",
@@ -25,6 +26,7 @@
 		"Hasher",
 		"hsts",
 		"ibmmq",
+		"Infisical",
 		"isbot",
 		"jose",
 		"jwks",
@@ -66,7 +68,8 @@
 		"workdir"
 	],
 	"editor.codeActionsOnSave": {
-		"source.organizeImports.biome": "always"
+		"source.organizeImports.biome": "explicit",
+		"quickfix.biome": "explicit"
 	},
 	"editor.tabSize": 2,
 	"exportall.config.relExclusion": [
@@ -76,7 +79,6 @@
 		"/packages/events/src/comsumers"
 	],
 	"editor.defaultFormatter": "biomejs.biome",
-	"biome.rename": true,
 	"[typescriptreact]": {
 		"editor.defaultFormatter": "biomejs.biome"
 	},
@@ -100,5 +102,8 @@
 	"editor.detectIndentation": false,
 	"cSpell.caseSensitive": true,
 	"javascript.experimental.updateImportsOnPaste": true,
-	"javascript.format.enable": false
+	"javascript.format.enable": false,
+	"biome.experimental.rename": true,
+	"biome.requireConfigFile": true,
+	"biome.lsp.bin": "./node_modules/.bin/biome"
 }

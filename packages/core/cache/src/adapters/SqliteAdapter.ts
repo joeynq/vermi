@@ -1,7 +1,7 @@
 import { Database, type Statement } from "bun:sqlite";
 import { Injectable } from "@vermi/core";
 import { stringify } from "@vermi/utils";
-import type { CacheAdapter } from "../interfaces";
+import { CacheAdapter } from "../interfaces";
 
 type CacheRow = {
 	key: string;
@@ -21,20 +21,18 @@ export interface SqliteAdapterConfig {
 }
 
 @Injectable("SINGLETON")
-export class SqliteAdapter<Data = any> implements CacheAdapter<Data, Database> {
-	connection!: Database;
-
+export class SqliteAdapter extends CacheAdapter<Database> {
 	#table = "cache";
 
 	#prepared!: PreparedStatements;
 
-	async init() {
+	init = async () => {
 		this.#createTable();
 		this.#prepareStatements();
-	}
+	};
 
 	#createTable() {
-		this.connection.exec(`
+		this.provider.exec(`
       CREATE TABLE IF NOT EXISTS ${this.#table} (
         key TEXT PRIMARY KEY,
         value TEXT,
@@ -45,16 +43,14 @@ export class SqliteAdapter<Data = any> implements CacheAdapter<Data, Database> {
 
 	#prepareStatements() {
 		this.#prepared = {
-			get: this.connection.prepare(
+			get: this.provider.prepare(
 				`SELECT value FROM ${this.#table} WHERE key = ? AND (ttl IS NULL OR ttl > strftime('%s', 'now'))`,
 			),
-			set: this.connection.prepare(`
+			set: this.provider.prepare(`
         INSERT INTO ${this.#table} (key, value, ttl) VALUES (?, ?, ?)
         ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value, ttl = EXCLUDED.ttl`),
-			delete: this.connection.prepare(
-				`DELETE FROM ${this.#table} WHERE key = ?`,
-			),
-			clear: this.connection.prepare(`DROP TABLE ${this.#table}`),
+			delete: this.provider.prepare(`DELETE FROM ${this.#table} WHERE key = ?`),
+			clear: this.provider.prepare(`DROP TABLE ${this.#table}`),
 		};
 	}
 

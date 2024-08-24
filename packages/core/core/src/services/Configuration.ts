@@ -1,7 +1,10 @@
-import { type Class, deepMerge, isClass } from "@vermi/utils";
+import { type Class, isClass } from "@vermi/utils";
 import { Injectable } from "../decorators";
-import type { AppOptions, ModuleConfig } from "../interfaces";
-import type { VermiModule } from "./VermiModule";
+import type {
+	AppOptions,
+	ModuleConfig,
+	VermiModuleMethods,
+} from "../interfaces";
 
 @Injectable()
 export class Configuration {
@@ -19,21 +22,37 @@ export class Configuration {
 		};
 	}
 
-	getModuleConfig<Config>(
-		module: string | Class<VermiModule<Config>>,
-	): ModuleConfig<Config> | undefined {
+	getModuleConfig<Config, Module extends VermiModuleMethods<Config>>(
+		module: string | Class<Module>,
+	): ModuleConfig<VermiModuleMethods<Config>>[];
+	getModuleConfig<Config, Module extends VermiModuleMethods<Config>>(
+		module: string | Class<Module>,
+		id: string,
+	): ModuleConfig<VermiModuleMethods<Config>> | undefined;
+	getModuleConfig<Config, Module extends VermiModuleMethods<Config>>(
+		module: string | Class<Module>,
+		id?: string,
+	) {
 		const moduleName = typeof module === "string" ? module : module.name;
-		return this.options.modules.get(moduleName);
+		const allConfigs = this.options.modules.get(moduleName);
+
+		if (id) {
+			return allConfigs?.find((config) => config.id === id)?.config;
+		}
+
+		return allConfigs?.map((c) => c.config);
 	}
 
-	setModuleConfig<Config>(
-		module: Class<VermiModule<Config>> | string,
-		config: Config,
+	setModuleConfig<Config, Module extends VermiModuleMethods<Config>>(
+		module: Class<Module> | string,
+		config: Module["config"][number],
 	): void;
-	setModuleConfig<Config>(config: ModuleConfig<Config>): void;
-	setModuleConfig<Config>(
-		module: Class<VermiModule<Config>> | string | ModuleConfig<Config>,
-		config?: Config,
+	setModuleConfig<Config, Module extends VermiModuleMethods<Config>>(
+		config: ModuleConfig<Module>,
+	): void;
+	setModuleConfig<Config, Module extends VermiModuleMethods<Config>>(
+		module: Class<Module> | string | ModuleConfig<Module>,
+		config?: Module["config"][number],
 	): void {
 		const moduleName =
 			typeof module === "string"
@@ -41,25 +60,25 @@ export class Configuration {
 				: isClass(module)
 					? module.name
 					: module.module.name;
-		const existing =
-			this.options.modules.get(moduleName) || ({} as ModuleConfig<Config>);
+		const existing = this.options.modules.get(moduleName) || [];
 
 		if (isClass(module)) {
-			this.options.modules.set(
-				module.name,
-				deepMerge(existing, { config } as any),
-			);
+			existing.push({ module, config });
+			this.options.modules.set(module.name, existing);
 			return;
 		}
 
 		if (typeof module === "string") {
-			if (!existing?.module) {
+			if (!existing?.find((m) => m.module.name === module)) {
 				throw new Error(`Module ${module} is not configured.`);
 			}
-			this.options.modules.set(module, deepMerge(existing, { config } as any));
+			existing.push({ module: existing[0].module, config });
+			this.options.modules.set(module, existing);
 			return;
 		}
 
-		this.options.modules.set(module.module.name, deepMerge(existing, module));
+		existing.push(module);
+
+		this.options.modules.set(module.module.name, existing);
 	}
 }

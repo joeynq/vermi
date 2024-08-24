@@ -1,18 +1,18 @@
 import { type Class, deepMerge } from "@vermi/utils";
-import type { VermiModule } from "../services";
+import type { VermiModuleMethods } from "../interfaces";
 import { createStore } from "../utils";
 
 export const SubmoduleStoreKey = Symbol("SubmoduleStoreKey");
 
-export type SubmoduleStore<O, M extends VermiModule<O>> = {
+export type SubmoduleStore<O, M extends VermiModuleMethods<O>> = {
 	module: Class<M>;
-	options: O;
+	options: M["config"][number];
 };
 
 export type SubmoduleStoreAPI = {
-	useModule: <O, M extends VermiModule<O>>(
+	useModule: <O, M extends VermiModuleMethods<O>>(
 		module: Class<M>,
-		options: O,
+		options: M["config"][number],
 	) => void;
 };
 

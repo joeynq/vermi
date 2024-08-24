@@ -1,3 +1,3 @@
 export * from "./Message";
-export * from "./WsContext";
+export * from "./Parser";
 export * from "./WsData";
